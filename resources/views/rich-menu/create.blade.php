@@ -50,8 +50,12 @@
             <input type="text_context6" id="text_context6" name="text_context6" required>
         </div>
         <div>
-            <label for="image">画像:</label>
-            <input type="file" id="image" name="image" required>
+            <label for="imageA">画像A:</label>
+            <input type="file" id="imageA" name="imageA" required>
+        </div>
+        <div>
+            <label for="imageB">画像B:</label>
+            <input type="file" id="imageB" name="imageB" required>
         </div>
         <button type="submit">作成</button>
     </form>

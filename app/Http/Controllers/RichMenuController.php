@@ -11,6 +11,7 @@ use LINE\Clients\MessagingApi\Model\RichMenuRequest;
 use LINE\Clients\MessagingApi\Model\RichMenuArea;
 use LINE\Clients\MessagingApi\Model\RichMenuBounds;
 use LINE\Clients\MessagingApi\Model\RichMenuSize;
+use LINE\Clients\MessagingApi\Model\CreateRichMenuAliasRequest;
 
 
 
@@ -49,77 +50,172 @@ class RichMenuController extends Controller
             config: $config
         );
 
-        $richMenu = new RichMenuRequest([
+        $aliasIdA = 'richmenu-alias-a-' . time();
+        $aliasIdB = 'richmenu-alias-b-' . time();
+
+        $richMenu_A = new RichMenuRequest([
             'size' => new RichMenuSize(['width' => 2500, 'height' => 1686]),
             'selected' => false,
             'name' => $name,
             'chatBarText' => 'タブを開く',
             'areas' => [
+                //1列目
                 new RichMenuArea([
-                    'bounds' => new RichMenuBounds(['x' => 0, 'y' => 0, 'width' => 833, 'height' => 843]),
+                    'bounds' => new RichMenuBounds(['x' => 833, 'y' => 0, 'width' => 834, 'height' => 282]),
+                    'action' => [
+                        'type' => 'richmenuswitch',
+                        "richMenuAliasId"=> $aliasIdB,
+                        "data"=> "richmenu-changed-to-b"
+                        ]
+                ])
+            ]
+        ]);
+        $richMenu_B = new RichMenuRequest([
+            'size' => new RichMenuSize(['width' => 2500, 'height' => 1686]),
+            'selected' => false,
+            'name' => $name,
+            'chatBarText' => 'タブを開く',
+            'areas' => [
+                //1列目
+                new RichMenuArea([
+                    'bounds' => new RichMenuBounds(['x' => 0, 'y' => 0, 'width' => 833, 'height' => 282]),
+                    'action' => [
+                        'type' => 'richmenuswitch',
+                        "richMenuAliasId"=> $aliasIdA,
+                        "data"=> "richmenu-changed-to-a"
+                        ]
+                ]),
+                new RichMenuArea([
+                    'bounds' => new RichMenuBounds(['x' => 833, 'y' => 0, 'width' => 834, 'height' => 282]),
+                    'action' => ['type' => 'message', 'text' => "tab2"]
+                ]),
+                new RichMenuArea([
+                    'bounds' => new RichMenuBounds(['x' => 1667, 'y' => 0, 'width' => 833, 'height' => 282]),
+                    'action' => ['type' => 'message', 'text' => "tab3"]
+                ]),
+                //2列目
+                new RichMenuArea([
+                    'bounds' => new RichMenuBounds(['x' => 0, 'y' => 282, 'width' => 833, 'height' => 702]),
                     'action' => ['type' => 'message', 'text' => $text_context1]
                 ]),
                 new RichMenuArea([
-                    'bounds' => new RichMenuBounds(['x' => 833, 'y' => 0, 'width' => 834, 'height' => 843]),
+                    'bounds' => new RichMenuBounds(['x' => 833, 'y' => 282, 'width' => 834, 'height' => 702]),
                     'action' => ['type' => 'message', 'text' => $text_context2]
                 ]),
                 new RichMenuArea([
-                    'bounds' => new RichMenuBounds(['x' => 1667, 'y' => 0, 'width' => 833, 'height' => 843]),
+                    'bounds' => new RichMenuBounds(['x' => 1667, 'y' => 282, 'width' => 833, 'height' => 702]),
                     'action' => ['type' => 'message', 'text' => $text_context3]
                 ]),
+                //3列目
                 new RichMenuArea([
-                    'bounds' => new RichMenuBounds(['x' => 0, 'y' => 843, 'width' => 833, 'height' => 843]),
+                    'bounds' => new RichMenuBounds(['x' => 0, 'y' => 984, 'width' => 833, 'height' => 702]),
                     'action' => ['type' => 'message', 'text' => $text_context4]
                 ]),
                 new RichMenuArea([
-                    'bounds' => new RichMenuBounds(['x' => 833, 'y' => 843, 'width' => 834, 'height' => 843]),
+                    'bounds' => new RichMenuBounds(['x' => 833, 'y' => 984, 'width' => 834, 'height' => 702]),
                     'action' => ['type' => 'message', 'text' => $text_context5]
                 ]),
                 new RichMenuArea([
-                    'bounds' => new RichMenuBounds(['x' => 1667, 'y' => 843, 'width' => 833, 'height' => 843]),
+                    'bounds' => new RichMenuBounds(['x' => 1667, 'y' => 984, 'width' => 833, 'height' => 702]),
                     'action' => ['type' => 'message', 'text' => "ai_start"]
                 ])
             ]
             
         ]);
 
-        // dd($richMenu);
+        // dd($richMenu_B);
         // $response = $messagingApi->createRichMenu($richMenu);
         // dd($response);
 
         try {
+            $response_A = $messagingApi->createRichMenu($richMenu_A);
+            $response_B = $messagingApi->createRichMenu($richMenu_B);
 
-            $response = $messagingApi->createRichMenu($richMenu);
+            $richMenuA_Id = $response_A->getRichMenuId();
+            $richMenuB_Id = $response_B->getRichMenuId();
+            // dd($richMenuB_Id);
             // dd($response);
-            $richMenuId = $response->getRichMenuId();
+            print($richMenuA_Id);
+            print($richMenuB_Id);
 
-            // dd($response);
-            print($richMenuId);
+
 
             // 画像のアップロード処理
-            if ($request->hasFile('image')) {
-                $imagePath = $request->file('image')->path();
-                $contentType = $request->file('image')->getMimeType();
+            if ($request->hasFile('imageA') && $request->hasFile('imageB')) {
 
-                print($imagePath);
-                $imageContent = file_get_contents($imagePath);
-                // dd($imageContent);
+                $imagePath_A = $request->file('imageA')->path();
+                $imagePath_B = $request->file('imageB')->path();
+                // dd($imagePath_A);
+                $contentType = $request->file('imageB')->getMimeType();
+
+                print($imagePath_B);
+                $imageContent_A = file_get_contents($imagePath_A);
+                $imageContent_B = file_get_contents($imagePath_B);
+                // dd($imageContent_B);
+
+            //    try {
+            //     $res_A=$messagingApiBlob->setRichMenuImageWithHttpInfo(
+            //         $richMenuA_Id,
+            //         $imageContent_A,
+            //         null,
+            //         [],
+            //         $contentType
+            //     );
+
 
                 // 画像をリッチメニューにアップロード
-                $res=$messagingApiBlob->setRichMenuImageWithHttpInfo(
-                    $richMenuId,
-                    $imageContent,
+                $res_A=$messagingApiBlob->setRichMenuImageWithHttpInfo(
+                    $richMenuA_Id,
+                    $imageContent_A,
                     null,
                     [],
                     $contentType
                 );
-                // dd($res);
+                $res_B=$messagingApiBlob->setRichMenuImageWithHttpInfo(
+                    $richMenuB_Id,
+                    $imageContent_B,
+                    null,
+                    [],
+                    $contentType
+                );
+                // dd($res_B);
+                // $aliasIdA = 'richmenu-alias-a-' . time();
+                // $aliasIdB = 'richmenu-alias-b-' . time();
 
+                $createAliasRequestA = new CreateRichMenuAliasRequest([
+                    'richMenuId' => $richMenuA_Id,
+                    'richMenuAliasId' => $aliasIdA
+                ]);
+    
+                $createAliasRequestB = new CreateRichMenuAliasRequest([
+                    'richMenuId' => $richMenuB_Id,
+                    'richMenuAliasId' => $aliasIdB
+                ]);
+    
 
+                // dd($createAliasRequestA);
+    
+                try {
+                    $aliasA = $messagingApi->createRichMenuAlias($createAliasRequestA);
+               } catch (\Exception $e) {
+                    \Log::error('リッチメニューエイリアス作成エラー: ' . $e->getMessage());
+                    dd($e->getMessage()); // エラーメッセージを表示
+               }
+               try {
+                $aliasB = $messagingApi->createRichMenuAlias($createAliasRequestB);
+           } catch (\Exception $e) {
+                \Log::error('リッチメニューエイリアス作成エラー: ' . $e->getMessage());
+                dd($e->getMessage()); // エラーメッセージを表示
+           }
+    
+                // $aliasA = $messagingApi->createRichMenuAlias($createAliasRequestA);
+                // $aliasB = $messagingApi->createRichMenuAlias($createAliasRequestB);
+    
+                // dd($aliasA);
                 // オプション: リッチメニューをデフォルトとして設定
-                $messagingApi->setDefaultRichMenu($richMenuId);
+                $result =$messagingApi->setDefaultRichMenu($richMenuA_Id);
 
-                // dd($res);
+                // dd($result);
                 print("リッチメニューを設定しました");
 
                 $defaultRichMenuId = $messagingApi->getDefaultRichMenuId();
