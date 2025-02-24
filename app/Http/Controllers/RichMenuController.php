@@ -3,111 +3,135 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
+use GuzzleHttp\Client;
+use LINE\Clients\MessagingApi\Api\MessagingApiApi;
+use LINE\Clients\MessagingApi\Api\MessagingApiBlobApi;
+use LINE\Clients\MessagingApi\Configuration;
+use LINE\Clients\MessagingApi\Model\RichMenuRequest;
+use LINE\Clients\MessagingApi\Model\RichMenuArea;
+use LINE\Clients\MessagingApi\Model\RichMenuBounds;
+use LINE\Clients\MessagingApi\Model\RichMenuSize;
+
+
 
 class RichMenuController extends Controller
 {
-    public function createRichMenu(Request $request)
+    public function index()
     {
-        $channelAccessToken = config('services.line.message.channel_token');
+        return view('rich-menu.create');
+    }
 
-        // リッチメニューの設定
-        $richMenuData = [
-            'size' => [
-                'width' => 2500,
-                'height' => 1686,
-            ],
-            'selected' => true,
-            'name' => 'My Rich Menu',
-            'chatBarText' => 'メニュー表示',
+    public function create(Request $request)
+    {
+        $name = $request->name;
+        $image = $request ->image;
+        $text_context1 = $request->text_context1;
+        $text_context2 = $request->text_context2;
+        $text_context3 = $request->text_context3;
+        $text_context4 = $request->text_context4;
+        $text_context5 = $request->text_context5;
+        $text_context6 = $request->text_context6;
+
+        // dd($request);
+
+        $client = new Client();
+        $config = new Configuration();
+        $config->setAccessToken(config('services.line.message.channel_token'));
+
+        // dd($config);
+
+        $messagingApi = new MessagingApiApi(
+            client: $client,
+            config: $config
+        );
+        $messagingApiBlob = new MessagingApiBlobApi(
+            client: $client,
+            config: $config
+        );
+
+        $richMenu = new RichMenuRequest([
+            'size' => new RichMenuSize(['width' => 2500, 'height' => 1686]),
+            'selected' => false,
+            'name' => $name,
+            'chatBarText' => 'タブを開く',
             'areas' => [
-                [
-                    'bounds' => [
-                        'x' => 0,
-                        'y' => 0,
-                        'width' => 1666,
-                        'height' => 1686,
-                    ],
-                    'action' => [
-                        'type' => 'message',
-                        'text' => 'Hello, World!',
-                    ],
-                ],
-                [
-                    'bounds' => [
-                        'x' => 1667,
-                        'y' => 0,
-                        'width' => 834,
-                        'height' => 843,
-                    ],
-                    'action' => [
-                        'type' => 'uri',
-                        'label' => 'Learnal公式HP',
-                        'uri' => 'https://www.learnal.website/'
-                    ],
-                ],
-            ],
-        ];
+                new RichMenuArea([
+                    'bounds' => new RichMenuBounds(['x' => 0, 'y' => 0, 'width' => 833, 'height' => 843]),
+                    'action' => ['type' => 'message', 'text' => $text_context1]
+                ]),
+                new RichMenuArea([
+                    'bounds' => new RichMenuBounds(['x' => 833, 'y' => 0, 'width' => 834, 'height' => 843]),
+                    'action' => ['type' => 'message', 'text' => $text_context2]
+                ]),
+                new RichMenuArea([
+                    'bounds' => new RichMenuBounds(['x' => 1667, 'y' => 0, 'width' => 833, 'height' => 843]),
+                    'action' => ['type' => 'message', 'text' => $text_context3]
+                ]),
+                new RichMenuArea([
+                    'bounds' => new RichMenuBounds(['x' => 0, 'y' => 843, 'width' => 833, 'height' => 843]),
+                    'action' => ['type' => 'message', 'text' => $text_context4]
+                ]),
+                new RichMenuArea([
+                    'bounds' => new RichMenuBounds(['x' => 833, 'y' => 843, 'width' => 834, 'height' => 843]),
+                    'action' => ['type' => 'message', 'text' => $text_context5]
+                ]),
+                new RichMenuArea([
+                    'bounds' => new RichMenuBounds(['x' => 1667, 'y' => 843, 'width' => 833, 'height' => 843]),
+                    'action' => ['type' => 'message', 'text' => "ai_start"]
+                ])
+            ]
+            
+        ]);
 
-        // リッチメニュー作成リクエスト
-        $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $channelAccessToken,
-            'Content-Type' => 'application/json',
-        ])->post('https://api.line.me/v2/bot/richmenu', $richMenuData);
+        // dd($richMenu);
+        // $response = $messagingApi->createRichMenu($richMenu);
+        // dd($response);
 
-        if ($response->successful()) {
-            return response()->json(['richMenuId' => $response->json('richMenuId')]);
-        } else {
-            return response()->json(['error' => $response->getBody()], $response->status());
-        }
-    }
+        try {
 
-    public function uploadRichMenuImage(Request $request, $richMenuId)
-    {
-        // アップロードされたファイル情報をログに記録
-        \Log::info($request->file('image'));
-    
-        // ファイルが存在するか確認
-        if (!$request->hasFile('image')) {
-            return response()->json(['error' => 'No file uploaded.'], 400);
-        }
-    
-        $channelAccessToken = config('services.line.message.channel_token');
-        $imagePath = $request->file('image')->getRealPath(); // 一時ファイルのパスを取得
-    
-        // ここで$imagePathが正しいか確認する
-        \Log::info("Image path: " . $imagePath);
-    
-        // リッチメニュー画像アップロードリクエスト
-        $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $channelAccessToken,
-            'Content-Type' => $request->file('image')->getClientMimeType(), // 動的にMIMEタイプを設定
-        ])->attach(
-            'imageFile', file_get_contents($imagePath), basename($imagePath)
-        )->post("https://api-data.line.me/v2/bot/richmenu/{$richMenuId}/content");
-    
-        if ($response->successful()) {
-            return response()->json(['message' => 'Image uploaded successfully']);
-        } else {
-            return response()->json(['error' => $response->getBody()], $response->status());
-        }
-    }
-    
-    
+            $response = $messagingApi->createRichMenu($richMenu);
+            // dd($response);
+            $richMenuId = $response->getRichMenuId();
 
-    public function setDefaultRichMenu($richMenuId)
-    {
-        $channelAccessToken = config('services.line.message.channel_token');
+            // dd($response);
+            print($richMenuId);
 
-        // デフォルトリッチメニュー設定リクエスト
-        $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $channelAccessToken,
-        ])->post("https://api.line.me/v2/bot/user/all/richmenu/{$richMenuId}");
+            // 画像のアップロード処理
+            if ($request->hasFile('image')) {
+                $imagePath = $request->file('image')->path();
+                $contentType = $request->file('image')->getMimeType();
 
-        if ($response->successful()) {
-            return response()->json(['message' => 'Default rich menu set successfully']);
-        } else {
-            return response()->json(['error' => $response->getBody()], $response->status());
+                print($imagePath);
+                $imageContent = file_get_contents($imagePath);
+                // dd($imageContent);
+
+                // 画像をリッチメニューにアップロード
+                $res=$messagingApiBlob->setRichMenuImageWithHttpInfo(
+                    $richMenuId,
+                    $imageContent,
+                    null,
+                    [],
+                    $contentType
+                );
+                // dd($res);
+
+
+                // オプション: リッチメニューをデフォルトとして設定
+                $messagingApi->setDefaultRichMenu($richMenuId);
+
+                // dd($res);
+                print("リッチメニューを設定しました");
+
+                $defaultRichMenuId = $messagingApi->getDefaultRichMenuId();
+                // dd($defaultRichMenuId);
+
+                return redirect()->back()->with('success', 'リッチメニューが作成され、画像がアップロードされました。');
+            } else {
+                return redirect()->back()->with('error', '画像ファイルが選択されていません。');
+            }
+        } catch (\Exception $e) {
+            \Log::error('リッチメニュー作成エラー: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'リッチメニューの作成に失敗しました。エラー: ' . $e->getMessage());
         }
     }
 }
